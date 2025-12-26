@@ -178,7 +178,7 @@ setMsg("initData length: " + (TG.initData ? TG.initData.length : 0), "");
         serverBalance = 0;
 
         loadLocalPoints();
-        setMsg("ℹ️ Local mode (open from Telegram to sync points).", "");
+        setMsg("❌ Auth error: " + (e?.message || e), "err");
         console.log("Auth failed:", e?.message || e);
       }
     }
