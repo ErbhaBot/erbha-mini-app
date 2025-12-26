@@ -238,6 +238,54 @@ setMsg("initData length: " + (TG.initData ? TG.initData.length : 0), "");
     }
 
     // expose for button
+    async function watchRewardedAd() {
+  setMsg("");
+  btn.disabled = true;
+
+  try {
+    if (typeof show_10376707 !== "function") {
+      throw new Error("Ad is loading, try again in a few seconds.");
+    }
+
+    // 1) Show rewarded ad
+    await show_10376707();
+
+    // 2) Must be verified
+    if (!authed || !tgId) {
+      throw new Error("Not verified with Telegram.");
+    }
+
+    // 3) Call reward function on server
+    const event_key = `${tgId}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/reward`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON,
+        "Authorization": `Bearer ${SUPABASE_ANON}`
+      },
+      body: JSON.stringify({ tg_id: tgId, event_key, points: 5 })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data?.error || `Reward failed (${res.status})`);
+    }
+
+    // 4) Update UI with server balance
+    serverBalance = Number(data.balance || 0);
+    pointsEl.textContent = String(serverBalance);
+    setMsg("✅ You watched the ad! +5 points added (server).", "ok");
+
+  } catch (e) {
+    setMsg("❌ " + (e?.message || e), "err");
+    console.log("Reward error:", e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
     window.watchRewardedAd = watchRewardedAd;
   </script>
 </body>
