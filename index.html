@@ -8,6 +8,11 @@
   <!-- Telegram Mini App -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
+  <!-- Monetag SDK (المثال اللي عطوك) -->
+  <script src='//libtl.com/sdk.js'
+          data-zone='10376707'
+          data-sdk='show_10376707'></script>
+
   <style>
     body {
       margin: 0;
@@ -29,4 +34,29 @@
       padding: 15px 25px;
       font-size: 18px;
       border-radius: 12px;
-      cursor:
+      cursor: pointer;
+      margin-top: 25px;
+      color: #000;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="box">
+    <h1>🎮 Erbha</h1>
+    <p>Play – Earn – Win</p>
+
+    <button onclick="showAd()">▶ Start</button>
+  </div>
+
+  <script>
+    function showAd() {
+      if (typeof show_10376707 === "function") {
+        show_10376707(); // عرض الإعلان
+      } else {
+        alert("Ad is loading, try again...");
+      }
+    }
+  </script>
+</body>
+</html>
