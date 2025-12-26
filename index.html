@@ -8,7 +8,7 @@
   <!-- Telegram Mini App -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- Monetag SDK -->
+  <!-- Monetag SDK (Base Tag) -->
   <script src='//libtl.com/sdk.js'
           data-zone='10376707'
           data-sdk='show_10376707'></script>
@@ -21,97 +21,101 @@
       color: #ffffff;
       text-align: center;
     }
-    .box { padding: 30px; }
-    h1 { color: #22c55e; font-size: 36px; margin: 10px 0; }
-    .card {
+    .box {
+      padding: 30px;
       max-width: 420px;
       margin: 0 auto;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 16px;
-      padding: 18px;
-      margin-top: 18px;
     }
-    .row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      margin-top: 10px;
+    h1 {
+      color: #22c55e;
+      font-size: 36px;
+      margin-bottom: 5px;
     }
-    .badge {
-      background: rgba(34,197,94,0.15);
-      border: 1px solid rgba(34,197,94,0.35);
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-weight: bold;
-      color: #a7f3d0;
+    p {
+      opacity: 0.85;
+      margin-top: 0;
+    }
+    .points {
+      margin-top: 20px;
+      font-size: 18px;
+      background: rgba(255,255,255,0.08);
+      padding: 12px;
+      border-radius: 12px;
     }
     button {
       background: #22c55e;
       border: none;
-      padding: 14px 22px;
-      font-size: 16px;
+      padding: 16px;
+      font-size: 17px;
       border-radius: 14px;
       cursor: pointer;
+      margin-top: 25px;
       color: #000;
-      font-weight: 700;
+      font-weight: bold;
       width: 100%;
-      margin-top: 14px;
     }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
-    .small { font-size: 12px; opacity: 0.7; margin-top: 10px; }
-    .msg { margin-top: 12px; font-size: 13px; opacity: 0.9; min-height: 18px; }
-    .danger { color: #fca5a5; }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .msg {
+      margin-top: 15px;
+      font-size: 14px;
+      min-height: 18px;
+    }
     .ok { color: #86efac; }
+    .err { color: #fca5a5; }
+    .note {
+      font-size: 12px;
+      opacity: 0.6;
+      margin-top: 15px;
+    }
   </style>
 </head>
 
 <body>
   <div class="box">
     <h1>🎮 Erbha</h1>
-    <p style="opacity:.85;margin-top:0">Play – Earn – Win</p>
+    <p>Play – Earn – Win</p>
 
-    <div class="card">
-      <div class="row">
-        <div style="opacity:.85">Your Points</div>
-        <div class="badge"><span id="points">0</span> ⭐</div>
-      </div>
+    <div class="points">
+      ⭐ Your Points: <b><span id="points">0</span></b>
+    </div>
 
-      <button id="btnRewarded" onclick="watchRewardedAd()">👀 Watch Ad & Earn</button>
+    <button id="watchBtn" onclick="watchRewardedAd()">
+      👀 Watch Ad & Earn
+    </button>
 
-      <div class="msg" id="msg"></div>
-      <div class="small">Tip: Ads appear after user interaction (button click).</div>
+    <div class="msg" id="msg"></div>
+
+    <div class="note">
+      Ads appear only after user interaction
     </div>
   </div>
 
   <script>
-    // --- Simple local points (for now) ---
-    // NOTE: This stores points on the same device/browser only.
+    /* ===============================
+       Simple Points System (Local)
+       =============================== */
     const POINTS_KEY = "erbha_points";
     const pointsEl = document.getElementById("points");
     const msgEl = document.getElementById("msg");
-    const btn = document.getElementById("btnRewarded");
+    const btn = document.getElementById("watchBtn");
 
-    function getPoints() {
-      return Number(localStorage.getItem(POINTS_KEY) || "0");
-    }
-    function setPoints(v) {
-      localStorage.setItem(POINTS_KEY, String(v));
-      pointsEl.textContent = String(v);
-    }
-    function addPoints(amount) {
-      setPoints(getPoints() + amount);
-    }
-    function setMsg(text, cls) {
-      msgEl.className = "msg " + (cls || "");
-      msgEl.textContent = text || "";
+    function loadPoints() {
+      const p = Number(localStorage.getItem(POINTS_KEY) || 0);
+      pointsEl.textContent = p;
+      return p;
     }
 
-    // Load initial points
-    setPoints(getPoints());
+    function savePoints(p) {
+      localStorage.setItem(POINTS_KEY, p);
+      pointsEl.textContent = p;
+    }
 
-    // Telegram: expand mini app (optional)
+    loadPoints();
+
+    // Telegram Mini App ready (اختياري لكنه أفضل)
     try {
       if (window.Telegram && Telegram.WebApp) {
         Telegram.WebApp.ready();
@@ -119,47 +123,64 @@
       }
     } catch (e) {}
 
-    // --- Monetag Rewarded Interstitial ---
-    async function watchRewardedAd() {
-      setMsg("");
+    /* ===============================
+       Monetag – Rewarded Interstitial
+       (exactly as Monetag example)
+       =============================== */
+    function watchRewardedAd() {
+      msgEl.textContent = "";
       btn.disabled = true;
 
-      // Ensure Monetag function is loaded
       if (typeof show_10376707 !== "function") {
-        setMsg("Ad is still loading. Try again in 5 seconds.", "danger");
+        msgEl.textContent = "Ad is loading, try again in a few seconds.";
+        msgEl.className = "msg err";
         btn.disabled = false;
         return;
       }
 
-      try {
-        // Rewarded interstitial (as Monetag provided)
-        await show_10376707();
+      // Rewarded interstitial
+      show_10376707().then(() => {
+        // Reward user AFTER ad watched
+        const current = loadPoints();
+        savePoints(current + 5); // عدد النقاط (غيّره لو حاب)
 
-        // ✅ Reward user AFTER ad watched
-        addPoints(5); // غير الرقم حسب نظامك (مثلا 1 أو 10)
-        setMsg("✅ Ad completed! +5 points added.", "ok");
-      } catch (e) {
-        // user closed / error happened
-        setMsg("❌ No reward (ad closed or failed). Try again later.", "danger");
-      } finally {
+        msgEl.textContent = "✅ You watched the ad! +5 points added.";
+        msgEl.className = "msg ok";
+      }).catch(() => {
+        msgEl.textContent = "❌ Ad not completed. No reward.";
+        msgEl.className = "msg err";
+      }).finally(() => {
         btn.disabled = false;
-      }
+      });
     }
 
-    // OPTIONAL: Rewarded Popup example (لو حبيت تستخدمه بدل interstitial)
-    // async function watchPopupAd() {
-    //   btn.disabled = true;
-    //   try {
-    //     await show_10376707('pop');
-    //     addPoints(3);
-    //     setMsg("✅ Popup ad completed! +3 points.", "ok");
-    //   } catch (e) {
-    //     setMsg("❌ Popup ad closed/failed.", "danger");
-    //   } finally {
-    //     btn.disabled = false;
-    //   }
-    // }
+    /* ===============================
+       OPTIONAL FORMATS (جاهزة لو حبيت)
+       =============================== */
 
+    // Rewarded Popup
+    /*
+    function watchPopupAd() {
+      show_10376707('pop').then(() => {
+        const current = loadPoints();
+        savePoints(current + 3);
+      }).catch(() => {});
+    }
+    */
+
+    // In-App Interstitial
+    /*
+    show_10376707({
+      type: 'inApp',
+      inAppSettings: {
+        frequency: 2,
+        capping: 0.1,
+        interval: 30,
+        timeout: 5,
+        everyPage: false
+      }
+    });
+    */
   </script>
 </body>
 </html>
