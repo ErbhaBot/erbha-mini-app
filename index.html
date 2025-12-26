@@ -95,92 +95,146 @@
 
   <script>
     /* ===============================
-       Simple Points System (Local)
+       CONFIG (Supabase)
        =============================== */
-    const POINTS_KEY = "erbha_points";
+    const SUPABASE_URL = "https://tvubifjpkrsjrwjkayvm.supabase.co";
+    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2dWJpZmpwa3JzanJ3amtheXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3MTg2MzQsImV4cCI6MjA4MjI5NDYzNH0.Qfr7d65GaV2PojXc036e2UX7s9m_qo9L4fnbpdHxppE";
+
+    /* ===============================
+       UI Refs
+       =============================== */
     const pointsEl = document.getElementById("points");
     const msgEl = document.getElementById("msg");
     const btn = document.getElementById("watchBtn");
 
-    function loadPoints() {
+    function setMsg(text, cls) {
+      msgEl.textContent = text || "";
+      msgEl.className = "msg " + (cls || "");
+    }
+
+    /* ===============================
+       Local Fallback Points (Backup)
+       =============================== */
+    const POINTS_KEY = "erbha_points";
+
+    function loadLocalPoints() {
       const p = Number(localStorage.getItem(POINTS_KEY) || 0);
       pointsEl.textContent = p;
       return p;
     }
 
-    function savePoints(p) {
+    function saveLocalPoints(p) {
       localStorage.setItem(POINTS_KEY, p);
       pointsEl.textContent = p;
     }
 
-    loadPoints();
+    /* ===============================
+       Telegram + Server Balance
+       =============================== */
+    let authed = false;
+    let tgId = null;
+    let serverBalance = 0;
 
-    // Telegram Mini App ready (اختياري لكنه أفضل)
-    try {
-      if (window.Telegram && Telegram.WebApp) {
-        Telegram.WebApp.ready();
-        Telegram.WebApp.expand();
+    async function postFunction(path, body) {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/${path}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON,
+          "Authorization": `Bearer ${SUPABASE_ANON}`
+        },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Request failed");
+      return data;
+    }
+
+    async function authWithTelegram() {
+      try {
+        const TG = window.Telegram?.WebApp;
+        if (!TG) throw new Error("Open inside Telegram");
+
+        TG.ready();
+        TG.expand();
+
+        const initData = TG.initData;
+        if (!initData) throw new Error("Missing initData");
+
+        const out = await postFunction("auth", { initData }); // { tg_id, balance }
+        tgId = out.tg_id;
+        serverBalance = Number(out.balance || 0);
+        pointsEl.textContent = String(serverBalance);
+
+        authed = true;
+        setMsg("✅ Verified with Telegram", "ok");
+      } catch (e) {
+        // fallback to local
+        authed = false;
+        tgId = null;
+        serverBalance = 0;
+
+        loadLocalPoints();
+        setMsg("ℹ️ Local mode (open from Telegram to sync points).", "");
+        console.log("Auth failed:", e?.message || e);
       }
-    } catch (e) {}
+    }
+
+    // Start auth on load
+    authWithTelegram();
 
     /* ===============================
        Monetag – Rewarded Interstitial
-       (exactly as Monetag example)
        =============================== */
-    function watchRewardedAd() {
-      msgEl.textContent = "";
+    async function watchRewardedAd() {
+      setMsg("");
       btn.disabled = true;
 
-      if (typeof show_10376707 !== "function") {
-        msgEl.textContent = "Ad is loading, try again in a few seconds.";
-        msgEl.className = "msg err";
+      try {
+        if (typeof show_10376707 !== "function") {
+          throw new Error("Ad is loading, try again in a few seconds.");
+        }
+
+        // Show rewarded interstitial
+        await show_10376707();
+
+        // After ad watched successfully:
+        if (authed && tgId) {
+          // ✅ الأفضل: نضيف نقاط على السيرفر (يتطلب Edge Function اسمها reward)
+          // إذا reward لسه ما سويتها، راح يعطيك Error ونرجع نضيف محلي مؤقتاً.
+          try {
+            const event_key = `${tgId}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
+            const rewardOut = await postFunction("reward", {
+              tg_id: tgId,
+              event_key,
+              points: 5
+            });
+            serverBalance = Number(rewardOut.balance || serverBalance);
+            pointsEl.textContent = String(serverBalance);
+            setMsg("✅ You watched the ad! +5 points added (server).", "ok");
+          } catch (err) {
+            // مؤقتاً لو reward غير موجودة
+            serverBalance += 5;
+            pointsEl.textContent = String(serverBalance);
+            setMsg("✅ Ad done! +5 points (server reward not set yet).", "ok");
+            console.log("Reward function not ready:", err?.message || err);
+          }
+        } else {
+          // Local fallback
+          const current = loadLocalPoints();
+          saveLocalPoints(current + 5);
+          setMsg("✅ You watched the ad! +5 points added (local).", "ok");
+        }
+
+      } catch (e) {
+        setMsg(`❌ ${e.message || "Ad not completed. No reward."}`, "err");
+      } finally {
         btn.disabled = false;
-        return;
       }
-
-      // Rewarded interstitial
-      show_10376707().then(() => {
-        // Reward user AFTER ad watched
-        const current = loadPoints();
-        savePoints(current + 5); // عدد النقاط (غيّره لو حاب)
-
-        msgEl.textContent = "✅ You watched the ad! +5 points added.";
-        msgEl.className = "msg ok";
-      }).catch(() => {
-        msgEl.textContent = "❌ Ad not completed. No reward.";
-        msgEl.className = "msg err";
-      }).finally(() => {
-        btn.disabled = false;
-      });
     }
 
-    /* ===============================
-       OPTIONAL FORMATS (جاهزة لو حبيت)
-       =============================== */
-
-    // Rewarded Popup
-    /*
-    function watchPopupAd() {
-      show_10376707('pop').then(() => {
-        const current = loadPoints();
-        savePoints(current + 3);
-      }).catch(() => {});
-    }
-    */
-
-    // In-App Interstitial
-    /*
-    show_10376707({
-      type: 'inApp',
-      inAppSettings: {
-        frequency: 2,
-        capping: 0.1,
-        interval: 30,
-        timeout: 5,
-        everyPage: false
-      }
-    });
-    */
+    // expose for button
+    window.watchRewardedAd = watchRewardedAd;
   </script>
 </body>
 </html>
