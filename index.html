@@ -281,7 +281,7 @@ async function watchRewardedAd() {
         "apikey": SUPABASE_ANON,
         "Authorization": `Bearer ${SUPABASE_ANON}`
       },
-      body: JSON.stringify({ tg_id: tgId, event_key, points: 5 })
+      body: JSON.stringify({ initData: initDataCached, event_key, points: 5 })
     });
 
     const data = await res.json().catch(() => ({}));
