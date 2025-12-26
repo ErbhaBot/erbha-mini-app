@@ -236,9 +236,7 @@ setMsg("initData length: " + (TG.initData ? TG.initData.length : 0), "");
         btn.disabled = false;
       }
     }
-
-    // expose for button
-    async function watchRewardedAd() {
+async function watchRewardedAd() {
   setMsg("");
   btn.disabled = true;
 
@@ -286,6 +284,7 @@ setMsg("initData length: " + (TG.initData ? TG.initData.length : 0), "");
   }
 }
 
+    // expose for button
     window.watchRewardedAd = watchRewardedAd;
   </script>
 </body>
