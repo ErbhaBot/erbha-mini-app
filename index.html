@@ -301,6 +301,43 @@ async function watchRewardedAd() {
     btn.disabled = false;
   }
 }
+async function requestWithdraw() {
+  try {
+    if (!authed) throw new Error("Not verified with Telegram.");
+    if (!initDataCached) throw new Error("Missing initData.");
+
+    const amount = Number(document.getElementById("w_amount").value || 0);
+    const method = String(document.getElementById("w_method").value || "");
+    const address = String(document.getElementById("w_address").value || "");
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/withdraw`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON,
+        "Authorization": `Bearer ${SUPABASE_ANON}`
+      },
+      body: JSON.stringify({
+        initData: initDataCached,
+        amount_points: amount,
+        payout_method: method,
+        payout_address: address
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || `Withdraw failed (${res.status})`);
+
+    serverBalance = Number(data.balance || 0);
+    pointsEl.textContent = String(serverBalance);
+    setMsg("✅ Withdraw request sent (pending).", "ok");
+  } catch (e) {
+    setMsg("❌ " + (e?.message || e), "err");
+  }
+}
+
+// expose for button
+window.requestWithdraw = requestWithdraw;
 
     // expose for button
     window.watchRewardedAd = watchRewardedAd;
