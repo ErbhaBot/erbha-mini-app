@@ -158,6 +158,9 @@
         TG.ready();
         TG.expand();
 
+setMsg("Telegram detected ✅", "ok");
+setMsg("initData length: " + (TG.initData ? TG.initData.length : 0), "");
+
         const initData = TG.initData;
         if (!initData) throw new Error("Missing initData");
 
@@ -181,6 +184,7 @@
     }
 
     // Start auth on load
+    setMsg("Checking Telegram...", "");
     authWithTelegram();
 
     /* ===============================
