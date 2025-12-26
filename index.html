@@ -1,346 +1,178 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Erbha</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  /* ===============================
+     CONFIG (Supabase)
+     =============================== */
+  const SUPABASE_URL = "https://tvubifjpkrsjrwjkayvm.supabase.co";
+  const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2dWJpZmpwa3JzanJ3amtheXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3MTg2MzQsImV4cCI6MjA4MjI5NDYzNH0.Qfr7d65GaV2PojXc036e2UX7s9m_qo9L4fnbpdHxppE";
 
-  <!-- Telegram Mini App -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  /* ===============================
+     UI Refs
+     =============================== */
+  const pointsEl = document.getElementById("points");
+  const msgEl = document.getElementById("msg");
+  const btn = document.getElementById("watchBtn");
 
-  <!-- Monetag SDK (Base Tag) -->
-  <script src='//libtl.com/sdk.js'
-          data-zone='10376707'
-          data-sdk='show_10376707'></script>
+  function setMsg(text, cls) {
+    msgEl.textContent = text || "";
+    msgEl.className = "msg " + (cls || "");
+  }
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #ffffff;
-      text-align: center;
+  /* ===============================
+     Local Fallback (Backup)
+     =============================== */
+  const POINTS_KEY = "erbha_points";
+  function loadLocalPoints() {
+    const p = Number(localStorage.getItem(POINTS_KEY) || 0);
+    pointsEl.textContent = p;
+    return p;
+  }
+  function saveLocalPoints(p) {
+    localStorage.setItem(POINTS_KEY, p);
+    pointsEl.textContent = p;
+  }
+
+  /* ===============================
+     Telegram + Server Balance
+     =============================== */
+  let authed = false;
+  let tgId = null;
+  let serverBalance = 0;
+  let initDataCached = "";
+
+  async function postFunction(path, body) {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON,
+        "Authorization": `Bearer ${SUPABASE_ANON}`
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || "Request failed");
+    return data;
+  }
+
+  async function authWithTelegram() {
+    try {
+      const TG = window.Telegram?.WebApp;
+      if (!TG) throw new Error("Open inside Telegram");
+
+      TG.ready();
+      TG.expand();
+
+      const initData = TG.initData;
+      initDataCached = initData || "";
+      if (!initData) throw new Error("Missing initData");
+
+      const out = await postFunction("auth", { initData }); // { tg_id, balance }
+      tgId = out.tg_id;
+      serverBalance = Number(out.balance || 0);
+      pointsEl.textContent = String(serverBalance);
+
+      authed = true;
+      setMsg("✅ Verified with Telegram", "ok");
+    } catch (e) {
+      authed = false;
+      tgId = null;
+      serverBalance = 0;
+
+      loadLocalPoints();
+      setMsg("ℹ️ Local mode (open from Telegram to sync points).", "");
+      console.log("Auth failed:", e?.message || e);
     }
-    .box {
-      padding: 30px;
-      max-width: 420px;
-      margin: 0 auto;
-    }
-    h1 {
-      color: #22c55e;
-      font-size: 36px;
-      margin-bottom: 5px;
-    }
-    p {
-      opacity: 0.85;
-      margin-top: 0;
-    }
-    .points {
-      margin-top: 20px;
-      font-size: 18px;
-      background: rgba(255,255,255,0.08);
-      padding: 12px;
-      border-radius: 12px;
-    }
-    button {
-      background: #22c55e;
-      border: none;
-      padding: 16px;
-      font-size: 17px;
-      border-radius: 14px;
-      cursor: pointer;
-      margin-top: 25px;
-      color: #000;
-      font-weight: bold;
-      width: 100%;
-    }
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-    .msg {
-      margin-top: 15px;
-      font-size: 14px;
-      min-height: 18px;
-    }
-    .ok { color: #86efac; }
-    .err { color: #fca5a5; }
-    .note {
-      font-size: 12px;
-      opacity: 0.6;
-      margin-top: 15px;
-    }
-  </style>
-</head>
+  }
 
-<body>
-  <div class="box">
-    <h1>🎮 Erbha</h1>
-    <p>Play – Earn – Win</p>
+  // Start auth on load
+  authWithTelegram();
 
-    <div class="points">
-      ⭐ Your Points: <b><span id="points">0</span></b>
-    </div>
+  /* ===============================
+     Monetag – Rewarded Interstitial (SECURE)
+     =============================== */
+  async function watchRewardedAd() {
+    setMsg("");
+    btn.disabled = true;
 
-    <button id="watchBtn" onclick="watchRewardedAd()">
-      👀 Watch Ad & Earn
-    </button>
+    try {
+      if (typeof show_10376707 !== "function") {
+        throw new Error("Ad is loading, try again in a few seconds.");
+      }
 
-    <!-- ✅ Withdraw UI -->
-    <div class="points" style="margin-top:14px;">
-      💸 Withdraw
-      <div style="margin-top:10px; display:grid; gap:10px;">
-        <input id="w_amount" type="number" placeholder="Amount points (min 100)" style="padding:12px;border-radius:12px;border:none;">
-        <select id="w_method" style="padding:12px;border-radius:12px;border:none;">
-          <option value="usdt">USDT</option>
-          <option value="stcpay">STC Pay</option>
-          <option value="paypal">PayPal</option>
-        </select>
-        <input id="w_address" type="text" placeholder="Wallet / STC / PayPal" style="padding:12px;border-radius:12px;border:none;">
-        <button onclick="requestWithdraw()">Request Withdraw</button>
-      </div>
-    </div>
+      // 1) Show rewarded ad
+      await show_10376707();
 
-    <div class="msg" id="msg"></div>
+      // 2) Must be verified
+      if (!authed || !initDataCached) {
+        throw new Error("Not verified with Telegram.");
+      }
 
-    <div class="note">
-      Ads appear only after user interaction
-    </div>
-  </div>
+      // 3) Call reward function on server (initData-based)
+      const event_key = `${Date.now()}:${Math.random().toString(16).slice(2)}`;
 
-
-  <script>
-    /* ===============================
-       CONFIG (Supabase)
-       =============================== */
-    const SUPABASE_URL = "https://tvubifjpkrsjrwjkayvm.supabase.co";
-    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2dWJpZmpwa3JzanJ3amtheXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3MTg2MzQsImV4cCI6MjA4MjI5NDYzNH0.Qfr7d65GaV2PojXc036e2UX7s9m_qo9L4fnbpdHxppE";
-
-    /* ===============================
-       UI Refs
-       =============================== */
-    const pointsEl = document.getElementById("points");
-    const msgEl = document.getElementById("msg");
-    const btn = document.getElementById("watchBtn");
-
-    function setMsg(text, cls) {
-      msgEl.textContent = text || "";
-      msgEl.className = "msg " + (cls || "");
-    }
-
-    /* ===============================
-       Local Fallback Points (Backup)
-       =============================== */
-    const POINTS_KEY = "erbha_points";
-
-    function loadLocalPoints() {
-      const p = Number(localStorage.getItem(POINTS_KEY) || 0);
-      pointsEl.textContent = p;
-      return p;
-    }
-
-    function saveLocalPoints(p) {
-      localStorage.setItem(POINTS_KEY, p);
-      pointsEl.textContent = p;
-    }
-
-    /* ===============================
-       Telegram + Server Balance
-       =============================== */
-    let authed = false;
-    let tgId = null;
-    let serverBalance = 0;
-    let initDataCached = "";
-
-    async function postFunction(path, body) {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/${path}`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/reward`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "apikey": SUPABASE_ANON,
           "Authorization": `Bearer ${SUPABASE_ANON}`
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ initData: initDataCached, event_key, points: 5 })
       });
+
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Request failed");
-      return data;
+      if (!res.ok) throw new Error(data?.error || `Reward failed (${res.status})`);
+
+      serverBalance = Number(data.balance || 0);
+      pointsEl.textContent = String(serverBalance);
+      setMsg("✅ You watched the ad! +5 points added (server).", "ok");
+    } catch (e) {
+      setMsg("❌ " + (e?.message || e), "err");
+      console.log("Reward error:", e);
+    } finally {
+      btn.disabled = false;
     }
-
-    async function authWithTelegram() {
-      try {
-        const TG = window.Telegram?.WebApp;
-        if (!TG) throw new Error("Open inside Telegram");
-
-        TG.ready();
-        TG.expand();
-
-setMsg("Telegram detected ✅", "ok");
-setMsg("initData length: " + (TG.initData ? TG.initData.length : 0), "");
-
-        const initData = TG.initData;
-        initDataCached = initData;
-        if (!initData) throw new Error("Missing initData");
-
-        const out = await postFunction("auth", { initData }); // { tg_id, balance }
-        tgId = out.tg_id;
-        serverBalance = Number(out.balance || 0);
-        pointsEl.textContent = String(serverBalance);
-
-        authed = true;
-        setMsg("✅ Verified with Telegram", "ok");
-      } catch (e) {
-        // fallback to local
-        authed = false;
-        tgId = null;
-        serverBalance = 0;
-
-        loadLocalPoints();
-        setMsg("❌ Auth error: " + (e?.message || e), "err");
-        console.log("Auth failed:", e?.message || e);
-      }
-    }
-
-    // Start auth on load
-    setMsg("Checking Telegram...", "");
-    authWithTelegram();
-
-    /* ===============================
-       Monetag – Rewarded Interstitial
-       =============================== */
-    async function watchRewardedAd() {
-      setMsg("");
-      btn.disabled = true;
-
-      try {
-        if (typeof show_10376707 !== "function") {
-          throw new Error("Ad is loading, try again in a few seconds.");
-        }
-
-        // Show rewarded interstitial
-        await show_10376707();
-
-        // After ad watched successfully:
-        if (authed && tgId) {
-          // ✅ الأفضل: نضيف نقاط على السيرفر (يتطلب Edge Function اسمها reward)
-          // إذا reward لسه ما سويتها، راح يعطيك Error ونرجع نضيف محلي مؤقتاً.
-          try {
-            const event_key = `${tgId}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
-            const rewardOut = await postFunction("reward", {
-              tg_id: tgId,
-              event_key,
-              points: 5
-            });
-            serverBalance = Number(rewardOut.balance || serverBalance);
-            pointsEl.textContent = String(serverBalance);
-            setMsg("✅ You watched the ad! +5 points added (server).", "ok");
-          } catch (err) {
-            // مؤقتاً لو reward غير موجودة
-            serverBalance += 5;
-            pointsEl.textContent = String(serverBalance);
-            setMsg("✅ Ad done! +5 points (server reward not set yet).", "ok");
-            console.log("Reward function not ready:", err?.message || err);
-          }
-        } else {
-          // Local fallback
-          const current = loadLocalPoints();
-          saveLocalPoints(current + 5);
-          setMsg("✅ You watched the ad! +5 points added (local).", "ok");
-        }
-
-      } catch (e) {
-        setMsg(`❌ ${e.message || "Ad not completed. No reward."}`, "err");
-      } finally {
-        btn.disabled = false;
-      }
-    }
-async function watchRewardedAd() {
-  setMsg("");
-  btn.disabled = true;
-
-  try {
-    if (typeof show_10376707 !== "function") {
-      throw new Error("Ad is loading, try again in a few seconds.");
-    }
-
-    // 1) Show rewarded ad
-    await show_10376707();
-
-    // 2) Must be verified
-    if (!authed || !tgId) {
-      throw new Error("Not verified with Telegram.");
-    }
-
-    // 3) Call reward function on server
-    const event_key = `${tgId}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
-
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/reward`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON,
-        "Authorization": `Bearer ${SUPABASE_ANON}`
-      },
-      body: JSON.stringify({ initData: initDataCached, event_key, points: 5 })
-    });
-
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(data?.error || `Reward failed (${res.status})`);
-    }
-
-    // 4) Update UI with server balance
-    serverBalance = Number(data.balance || 0);
-    pointsEl.textContent = String(serverBalance);
-    setMsg("✅ You watched the ad! +5 points added (server).", "ok");
-
-  } catch (e) {
-    setMsg("❌ " + (e?.message || e), "err");
-    console.log("Reward error:", e);
-  } finally {
-    btn.disabled = false;
   }
-}
-async function requestWithdraw() {
-  try {
-    if (!authed) throw new Error("Not verified with Telegram.");
-    if (!initDataCached) throw new Error("Missing initData.");
 
-    const amount = Number(document.getElementById("w_amount").value || 0);
-    const method = String(document.getElementById("w_method").value || "");
-    const address = String(document.getElementById("w_address").value || "");
+  /* ===============================
+     Withdraw (SECURE)
+     =============================== */
+  async function requestWithdraw() {
+    try {
+      if (!authed || !initDataCached) throw new Error("Not verified with Telegram.");
 
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/withdraw`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON,
-        "Authorization": `Bearer ${SUPABASE_ANON}`
-      },
-      body: JSON.stringify({
-        initData: initDataCached,
-        amount_points: amount,
-        payout_method: method,
-        payout_address: address
-      })
-    });
+      const amount = Number(document.getElementById("w_amount").value || 0);
+      const method = String(document.getElementById("w_method").value || "");
+      const address = String(document.getElementById("w_address").value || "");
 
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error || `Withdraw failed (${res.status})`);
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/withdraw`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON,
+          "Authorization": `Bearer ${SUPABASE_ANON}`
+        },
+        body: JSON.stringify({
+          initData: initDataCached,
+          amount_points: amount,
+          payout_method: method,
+          payout_address: address
+        })
+      });
 
-    serverBalance = Number(data.balance || 0);
-    pointsEl.textContent = String(serverBalance);
-    setMsg("✅ Withdraw request sent (pending).", "ok");
-  } catch (e) {
-    setMsg("❌ " + (e?.message || e), "err");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `Withdraw failed (${res.status})`);
+
+      serverBalance = Number(data.balance || 0);
+      pointsEl.textContent = String(serverBalance);
+      setMsg("✅ Withdraw request sent (pending).", "ok");
+    } catch (e) {
+      setMsg("❌ " + (e?.message || e), "err");
+      console.log("Withdraw error:", e);
+    }
   }
-}
 
-// expose for button
-window.requestWithdraw = requestWithdraw;
-
-    // expose for button
-    window.watchRewardedAd = watchRewardedAd;
-  </script>
-</body>
-</html>
+  // expose for buttons
+  window.watchRewardedAd = watchRewardedAd;
+  window.requestWithdraw = requestWithdraw;
+</script>
