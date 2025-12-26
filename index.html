@@ -31,13 +31,18 @@
 </head>
 
 <body>
-  <div class="box">
-    <h1>🎮 Erbha</h1>
-    <p>Play – Earn – Win</p>
+<div class="points">
+  ⭐ Your Points: <b><span id="points">0</span></b>
+</div>
 
-    <div class="points">
-      ⭐ Your Points: <b><span id="points">0</span></b>
-    </div>
+<div class="note">
+  💡 كيف الأرباح؟<br>
+  • شاهد الإعلانات واكسب نقاط<br>
+  • كل إعلان = +2 نقطة<br>
+  • كل 100 نقطة = 0.10$<br>
+  • كل 1000 نقطة = 1$<br>
+  • الحد الأدنى للسحب: 5000 نقطة (5$)
+</div>
 
     <button id="watchBtn" onclick="watchRewardedAd()">
       👀 Watch Ad & Earn
@@ -159,7 +164,7 @@
         const out = await postFunction("reward", {
           initData: initDataCached,
           event_key,
-          points: 5
+          points: 2
         });
 
         serverBalance = Number(out.balance || 0);
