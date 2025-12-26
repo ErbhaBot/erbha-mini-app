@@ -150,6 +150,7 @@
     let authed = false;
     let tgId = null;
     let serverBalance = 0;
+    let initDataCached = "";
 
     async function postFunction(path, body) {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/${path}`, {
@@ -178,6 +179,7 @@ setMsg("Telegram detected ✅", "ok");
 setMsg("initData length: " + (TG.initData ? TG.initData.length : 0), "");
 
         const initData = TG.initData;
+        initDataCached = initData;
         if (!initData) throw new Error("Missing initData");
 
         const out = await postFunction("auth", { initData }); // { tg_id, balance }
