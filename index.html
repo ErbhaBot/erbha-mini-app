@@ -200,6 +200,28 @@
         const amount = Number(document.getElementById("w_amount").value || 0);
         const method = String(document.getElementById("w_method").value || "");
         const address = String(document.getElementById("w_address").value || "");
+        // ===== Validation قبل الإرسال =====
+if (!method) throw new Error("اختر طريقة السحب أولاً.");
+
+if (!Number.isFinite(amount) || amount < 5000) {
+  throw new Error("الحد الأدنى للسحب اليومي هو 5000 نقطة (5$).");
+}
+
+if (method === "usdt") {
+  const ok = /^0x[a-fA-F0-9]{40}$/.test(address.trim());
+  if (!ok) throw new Error("عنوان USDT (BEP20) غير صحيح.");
+}
+
+if (method === "stcpay") {
+  const a = address.trim().replace(/\s+/g, "");
+  const ok = /^(05\d{8}|5\d{8}|\+9665\d{8}|9665\d{8})$/.test(a);
+  if (!ok) throw new Error("رقم STC Pay غير صحيح.");
+}
+
+if (method === "paypal") {
+  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address.trim());
+  if (!ok) throw new Error("بريد PayPal غير صحيح.");
+}
 
         const out = await postFunction("withdraw", {
           initData: initDataCached,
@@ -228,26 +250,37 @@
     function updateWithdrawNote() {
   const method = document.getElementById("w_method").value;
   const note = document.getElementById("withdrawNote");
+  const addr = document.getElementById("w_address");
+
+  // نمسح الحقل عند تغيير الطريقة
+  addr.value = "";
 
   if (method === "usdt") {
+    addr.placeholder = "أدخل عنوان محفظة USDT (BEP20) يبدأ بـ 0x...";
     note.innerHTML = `
       <b>تنبيه قبل السحب:</b><br>
       • يرجى استخدام <b>عنوان محفظة USDT (BEP20)</b> فقط.<br>
-      <span style="color:#fca5a5;"><b>أي عنوان شبكة أخرى سيتم رفض السحب.</b></span>
+      <span style="color:#fca5a5;"><b>أي شبكة أخرى سيتم رفض السحب.</b></span>
     `;
-  } else if (method === "stcpay") {
+  } 
+  else if (method === "stcpay") {
+    addr.placeholder = "أدخل رقم الجوال المرتبط بـ STC Pay (05xxxxxxxx)";
     note.innerHTML = `
       <b>تنبيه قبل السحب:</b><br>
       • يرجى استخدام <b>رقم الجوال المرتبط بـ STC Pay</b>.<br>
       <span style="color:#fca5a5;"><b>أي رقم غير صحيح سيتم رفض السحب.</b></span>
     `;
-  } else if (method === "paypal") {
+  } 
+  else if (method === "paypal") {
+    addr.placeholder = "أدخل بريد PayPal الإلكتروني (example@email.com)";
     note.innerHTML = `
       <b>تنبيه قبل السحب:</b><br>
       • يرجى استخدام <b>البريد الإلكتروني لحساب PayPal</b>.<br>
       <span style="color:#fca5a5;"><b>أي بريد غير صحيح سيتم رفض السحب.</b></span>
     `;
-  } else {
+  } 
+  else {
+    addr.placeholder = "اختر طريقة السحب أولاً";
     note.innerHTML = `
       <b>تنبيه قبل السحب:</b><br>
       يرجى اختيار طريقة السحب لعرض التعليمات.
