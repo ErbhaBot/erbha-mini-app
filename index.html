@@ -200,22 +200,23 @@
         const amount = Number(document.getElementById("w_amount").value || 0);
         const method = String(document.getElementById("w_method").value || "");
         const address = String(document.getElementById("w_address").value || "");
-        // ===== Validation قبل الإرسال =====
+      // ===== Validation قبل الإرسال =====
 if (!method) throw new Error("اختر طريقة السحب أولاً.");
 
-if (!Number.isFinite(amount) || amount < 5000) {
-  throw new Error("الحد الأدنى للسحب اليومي هو 5000 نقطة (5$).");
+// ✅ فقط 5000 نقطة لكل عملية سحب
+if (!Number.isFinite(amount) || amount !== 5000) {
+  throw new Error("السحب المتاح هو 5000 نقطة فقط لكل عملية (5$).");
 }
 
 if (method === "usdt") {
   const ok = /^0x[a-fA-F0-9]{40}$/.test(address.trim());
-  if (!ok) throw new Error("عنوان USDT (BEP20) غير صحيح.");
+  if (!ok) throw new Error("عنوان USDT (BEP20) غير صحيح. لازم يبدأ بـ 0x.");
 }
 
 if (method === "stcpay") {
   const a = address.trim().replace(/\s+/g, "");
   const ok = /^(05\d{8}|5\d{8}|\+9665\d{8}|9665\d{8})$/.test(a);
-  if (!ok) throw new Error("رقم STC Pay غير صحيح.");
+  if (!ok) throw new Error("رقم STC Pay غير صحيح. مثال: 05xxxxxxxx");
 }
 
 if (method === "paypal") {
