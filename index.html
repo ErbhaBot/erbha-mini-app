@@ -243,10 +243,6 @@ if (method === "paypal") {
     window.watchRewardedAd = watchRewardedAd;
     window.requestWithdraw = requestWithdraw;
     
-    function toggleInfo() {
-  const box = document.getElementById("rewardInfo");
-  box.style.display = box.style.display === "none" ? "block" : "none";
-}
     function updateWithdrawNote() {
   const method = document.getElementById("w_method").value;
   const note = document.getElementById("withdrawNote");
@@ -262,24 +258,21 @@ if (method === "paypal") {
       • يرجى استخدام <b>عنوان محفظة USDT (BEP20)</b> فقط.<br>
       <span style="color:#fca5a5;"><b>أي شبكة أخرى سيتم رفض السحب.</b></span>
     `;
-  } 
-  else if (method === "stcpay") {
+  } else if (method === "stcpay") {
     addr.placeholder = "أدخل رقم الجوال المرتبط بـ STC Pay (05xxxxxxxx)";
     note.innerHTML = `
       <b>تنبيه قبل السحب:</b><br>
       • يرجى استخدام <b>رقم الجوال المرتبط بـ STC Pay</b>.<br>
       <span style="color:#fca5a5;"><b>أي رقم غير صحيح سيتم رفض السحب.</b></span>
     `;
-  } 
-  else if (method === "paypal") {
+  } else if (method === "paypal") {
     addr.placeholder = "أدخل بريد PayPal الإلكتروني (example@email.com)";
     note.innerHTML = `
       <b>تنبيه قبل السحب:</b><br>
       • يرجى استخدام <b>البريد الإلكتروني لحساب PayPal</b>.<br>
       <span style="color:#fca5a5;"><b>أي بريد غير صحيح سيتم رفض السحب.</b></span>
     `;
-  } 
-  else {
+  } else {
     addr.placeholder = "اختر طريقة السحب أولاً";
     note.innerHTML = `
       <b>تنبيه قبل السحب:</b><br>
