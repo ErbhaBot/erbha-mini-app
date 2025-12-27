@@ -58,13 +58,13 @@
     <div class="points" style="margin-top:14px;">
       💸 سحب الارباح
       <div class="grid">
-        <input id="w_amount" type="number" placeholder="Amount points (min 100)">
+        <input id="w_amount" type="number" placeholder="عدد النقاط (الحد الأدنى 5000)">
         <select id="w_method">
-          <option value="usdt">USDT</option>
+          <option value="usdt">USDT (BEP20)</option>
           <option value="stcpay">STC Pay</option>
           <option value="paypal">PayPal</option>
         </select>
-        <input id="w_address" type="text" placeholder="Wallet / STC / PayPal">
+        <input id="w_address" type="text" placeholder="المحفظة / رقم الجوال / الايميل">
         <button onclick="requestWithdraw()">طلب السحب</button>
       </div>
     </div>
