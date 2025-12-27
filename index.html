@@ -57,20 +57,20 @@
 
     <div class="points" style="margin-top:14px;">
       💸 سحب الارباح
-      <div class="note" style="text-align:right; line-height:1.8; margin-top:10px;">
+      <!-- Withdraw Instructions (Auto) -->
+<div id="withdrawNote" class="note" style="text-align:right; line-height:1.8; margin-top:10px;">
   <b>تنبيه قبل السحب:</b><br>
-  • يرجى استخدام <b>عنوان محفظة USDT (BEP20)</b> عند اختيار USDT.<br>
-  • يرجى استخدام <b>رقم الجوال</b> عند اختيار STC Pay.<br>
-  • يرجى استخدام <b>البريد الإلكتروني</b> عند اختيار PayPal.<br>
-  <span style="color:#fca5a5;"><b>أي خطأ في البيانات سيتم رفض السحب مباشرة.</b></span>
+  يرجى اختيار طريقة السحب لعرض التعليمات.
 </div>
       <div class="grid">
         <input id="w_amount" type="number" placeholder="عدد النقاط (الحد الأدنى 5000)">
-        <select id="w_method">
-          <option value="usdt">USDT (BEP20)</option>
-          <option value="stcpay">STC Pay</option>
-          <option value="paypal">PayPal</option>
-        </select>
+        <select id="w_method" onchange="updateWithdrawNote()"
+        style="padding:12px;border-radius:12px;border:none;">
+  <option value="">-- اختر طريقة السحب --</option>
+  <option value="usdt">USDT (BEP20)</option>
+  <option value="stcpay">STC Pay</option>
+  <option value="paypal">PayPal</option>
+</select>
         <input id="w_address" type="text" placeholder="المحفظة / رقم الجوال / الايميل">
         <button onclick="requestWithdraw()">طلب السحب</button>
       </div>
@@ -224,6 +224,35 @@
     function toggleInfo() {
   const box = document.getElementById("rewardInfo");
   box.style.display = box.style.display === "none" ? "block" : "none";
+}
+    function updateWithdrawNote() {
+  const method = document.getElementById("w_method").value;
+  const note = document.getElementById("withdrawNote");
+
+  if (method === "usdt") {
+    note.innerHTML = `
+      <b>تنبيه قبل السحب:</b><br>
+      • يرجى استخدام <b>عنوان محفظة USDT (BEP20)</b> فقط.<br>
+      <span style="color:#fca5a5;"><b>أي عنوان شبكة أخرى سيتم رفض السحب.</b></span>
+    `;
+  } else if (method === "stcpay") {
+    note.innerHTML = `
+      <b>تنبيه قبل السحب:</b><br>
+      • يرجى استخدام <b>رقم الجوال المرتبط بـ STC Pay</b>.<br>
+      <span style="color:#fca5a5;"><b>أي رقم غير صحيح سيتم رفض السحب.</b></span>
+    `;
+  } else if (method === "paypal") {
+    note.innerHTML = `
+      <b>تنبيه قبل السحب:</b><br>
+      • يرجى استخدام <b>البريد الإلكتروني لحساب PayPal</b>.<br>
+      <span style="color:#fca5a5;"><b>أي بريد غير صحيح سيتم رفض السحب.</b></span>
+    `;
+  } else {
+    note.innerHTML = `
+      <b>تنبيه قبل السحب:</b><br>
+      يرجى اختيار طريقة السحب لعرض التعليمات.
+    `;
+  }
 }
   </script>
 </body>
